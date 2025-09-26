@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="#1e293b"/>
+  
+  <!-- Outer glowing link ring -->
+  <circle cx="100" cy="100" r="60" stroke="#3b82f6" stroke-width="12" fill="none"/>
+
+  <!-- Node points -->
+  <circle cx="60" cy="100" r="10" fill="#3b82f6"/>
+  <circle cx="140" cy="100" r="10" fill="#3b82f6"/>
+  <circle cx="100" cy="60" r="10" fill="#3b82f6"/>
+  <circle cx="100" cy="140" r="10" fill="#3b82f6"/>
+
+  <!-- Minimal “L” monogram in the center -->
+  <path d="M85 75v50h30" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
