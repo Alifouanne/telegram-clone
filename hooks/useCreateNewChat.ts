@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // import { ensureStreamUsers } from "@/actions/ensureStreamUsers";
 // import stramClient from "@/lib/stream";
 
@@ -101,22 +102,17 @@
 //   return createNewChat;
 // };
 
+// hooks/useCreateNewChat.ts
 import { ensureStreamUsers } from "@/actions/ensureStreamUsers";
 import streamClient from "@/lib/stream";
 
 /**
- * Custom hook for creating new chat channels
- * Handles both 1-on-1 chats and group chats with Stream Chat
- * @returns Function to create a new chat channel
+ * createNewChat args:
+ *  - members: array of user ids (must include creator)
+ *  - created_by_id: creator user id
+ *  - groupName?: optional for group channels
  */
 export const useCreateNewChat = () => {
-  /**
-   * Creates a new chat channel or returns existing 1-on-1 chat
-   * @param members - Array of user IDs to include in the chat
-   * @param created_by_id - ID of the user creating the chat
-   * @param groupName - Optional name for group chats
-   * @returns Promise that resolves to the created or existing channel
-   */
   const createNewChat = async ({
     members,
     created_by_id,
@@ -126,103 +122,71 @@ export const useCreateNewChat = () => {
     created_by_id: string;
     groupName?: string;
   }) => {
-    // Ensure all users exist in Stream before proceeding
-    const allUsers = Array.from(new Set([...(members || []), created_by_id]));
-    await ensureStreamUsers(allUsers);
+    // Normalize members, ensure creator present
+    const allMembers = Array.from(new Set([...(members || []), created_by_id]));
+    await ensureStreamUsers(allMembers);
 
-    // Determine if this is a group chat (more than 2 total participants)
-    const totalMembers = allUsers.length;
-    const isGroupChat = totalMembers > 2;
+    const isGroupChat = allMembers.length > 2;
 
-    // For 1-on-1 chats, check if a channel already exists between these two users
+    // For DMs (1-on-1), try to find an existing channel
     if (!isGroupChat) {
       try {
-        // Query for existing messaging channels with exactly these members
-        const existingChannels = await streamClient.queryChannels(
-          {
-            type: "messaging",
-            members: { $eq: allUsers }, // Use allUsers instead of members
-          },
+        const channels = await streamClient.queryChannels(
+          { type: "messaging", members: { $in: allMembers } },
           { created_at: -1 },
-          { limit: 1 }
+          { limit: 10 }
         );
 
-        if (existingChannels.length > 0) {
-          const channel = existingChannels[0];
-          const channelMembers = Object.keys(channel.state.members);
+        const found = channels.find((ch) => {
+          const chMembers = Object.keys(ch.state.members || {});
+          return (
+            chMembers.length === 2 &&
+            allMembers.every((id) => chMembers.includes(id))
+          );
+        });
 
-          // Double-check that this is exactly a 2-person chat with the same members
-          if (
-            channelMembers.length === 2 &&
-            allUsers.length === 2 &&
-            allUsers.every((member) => channelMembers.includes(member))
-          ) {
-            console.log("Existing 1-1 chat found", channel.id);
-
-            // Make sure to watch the channel with presence enabled
-            await channel.watch({
-              presence: true,
-              state: true,
-            });
-
-            return channel;
-          }
+        if (found) {
+          // ensure we are watching it so presence & messages flow
+          await found.watch({ presence: true, state: true, watch: true });
+          return found;
         }
-      } catch (error) {
-        console.error("Error querying existing channels:", error);
-        // Continue to create new channel if query fails
+      } catch (err) {
+        console.error("Error querying channels:", err);
+        // fallthrough to create a new one
       }
     }
 
-    // Generate a unique channel ID using timestamp and random string
-    const channelId = `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 15)}`;
-
+    // Create channel:
+    // - For DMs: omit channel id so Stream creates a 'distinct' channel for same members.
+    // - For group chats we can provide our own short id or let Stream create one.
     try {
-      // Prepare channel data object with all required fields
-      const channelData: {
-        members: string[];
-        created_by_id: string;
-        name?: string;
-        created_by?: { id: string }; // Add created_by object for better tracking
-      } = {
-        members: allUsers, // Use allUsers to include creator
-        created_by_id,
-        created_by: { id: created_by_id }, // Stream expects this format
-      };
-
-      // For group chats, set the channel name
-      if (isGroupChat) {
-        channelData.name =
-          groupName || `Group chat (${allUsers.length} members)`;
-      }
-
-      // Create the channel with appropriate type
       const channel = streamClient.channel(
         isGroupChat ? "team" : "messaging",
-        channelId,
-        channelData
+
+        {
+          members: allMembers,
+          created_by_id,
+          distinct: true,
+          ...(isGroupChat && {
+            name: groupName || `Group chat (${allMembers.length})`,
+          }),
+        } as Record<string, any>
       );
+      await channel.create();
 
-      // Watch the channel to establish connection and enable presence
-      // This is crucial for presence and message delivery
-      await channel.watch({
-        presence: true, // Enable online/offline status tracking
-        state: true, // Get the current state of the channel
-        watch: true, // Start watching for real-time updates
-      });
+      // watch to enable presence + get current state
+      await channel.watch({ presence: true, state: true, watch: true });
 
-      // Add members explicitly (this ensures proper member management)
-      if (allUsers.length > 1) {
-        await channel.addMembers(allUsers, {});
+      // ensure members are added (watch + addMembers is safe)
+      if (allMembers.length > 0) {
+        await channel.addMembers(allMembers);
       }
 
-      console.log(`${isGroupChat ? "Group" : "1-1"} chat created:`, channel.id);
+      console.log(`${isGroupChat ? "Group" : "DM"} channel ready:`, channel.id);
       return channel;
-    } catch (error) {
-      console.error("Error creating channel:", error);
-      throw error;
+    } catch (err) {
+      console.error("Error creating channel:", err);
+      throw err;
     }
   };
 

@@ -36,12 +36,18 @@ function NewChatDialog({ children }: { children: ReactNode }) {
   const createNewChat = useCreateNewChat();
   const { user } = useUser();
   const { setActiveChannel } = useChatContext();
-
+  //!edit this one
   // Add a user to the selection if not already present
-  const handleSelectUser = (user: Doc<"users">) => {
-    if (!selectedUsers.find((u) => u._id === user._id)) {
-      setSelectedUsers((prev) => [...prev, user]);
-    }
+  // const handleSelectUser = (user: Doc<"users">) => {
+  //   if (!selectedUsers.find((u) => u._id === user._id)) {
+  //     setSelectedUsers((prev) => [...prev, user]);
+  //   }
+  // };
+  const handleSelectUser = (u: Doc<"users">) => {
+    setSelectedUsers((prev) => {
+      if (prev.find((p) => p._id === u._id)) return prev;
+      return [...prev, u];
+    });
   };
   // Remove a user from the selection
   const removeUser = (userId: string) => {
@@ -55,19 +61,44 @@ function NewChatDialog({ children }: { children: ReactNode }) {
       setGroupName("");
     }
   };
+  //!edit this also
   // Create the channel (1:1 or group) then set it as active in Stream
+  // const handleCreateChat = async () => {
+  //   const totalMembers = selectedUsers.length + 1;
+  //   const isGroupChat = totalMembers > 2;
+  //   const channel = await createNewChat({
+  //     members: [user?.id as string, ...selectedUsers.map((user) => user._id)],
+  //     created_by_id: user?.id as string,
+  //     groupName: isGroupChat ? groupName.trim() || undefined : undefined,
+  //   });
+  //   setActiveChannel(channel);
+  //   setSelectedUsers([]);
+  //   setGroupName("");
+  //   setOpen(false);
+  // };
   const handleCreateChat = async () => {
-    const totalMembers = selectedUsers.length + 1;
-    const isGroupChat = totalMembers > 2;
-    const channel = await createNewChat({
-      members: [user?.id as string, ...selectedUsers.map((user) => user._id)],
-      created_by_id: user?.id as string,
-      groupName: isGroupChat ? groupName.trim() || undefined : undefined,
-    });
-    setActiveChannel(channel);
-    setSelectedUsers([]);
-    setGroupName("");
-    setOpen(false);
+    if (!user?.id) return;
+    try {
+      const selectedIds = selectedUsers.map((u) => u._id);
+      // all members must include the current user plus selected users (no duplicates)
+      const members = Array.from(new Set([user.id, ...selectedIds]));
+
+      const totalMembers = members.length;
+      const isGroupChat = totalMembers > 2;
+
+      const channel = await createNewChat({
+        members,
+        created_by_id: user.id,
+        groupName: isGroupChat ? groupName.trim() || undefined : undefined,
+      });
+
+      setActiveChannel(channel);
+      setSelectedUsers([]);
+      setGroupName("");
+      setOpen(false);
+    } catch (err) {
+      console.error("Failed to create chat:", err);
+    }
   };
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

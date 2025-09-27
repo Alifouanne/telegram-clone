@@ -22,22 +22,60 @@ function UserSyncWrapper({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   // Convex mutation to upsert (create or update) the user record
   const createOrUpdateUser = useMutation(api.users.upsertUser);
-
+  //!edit here
   // Synchronizes the current Clerk user to Convex and connects to Stream
+  // const syncUser = useCallback(async () => {
+  //   if (!user?.id) return;
+  //   try {
+  //     setIsLoading(true);
+  //     setError(null);
+  //     // Provides a JWT token for Stream using a server action
+  //     const tokenProvider = async () => {
+  //       if (!user.id) {
+  //         throw new Error("User not found");
+  //       }
+  //       const token = await createToken(user.id);
+  //       return token;
+  //     };
+  //     // Save or update the user in Convex
+  //     await createOrUpdateUser({
+  //       userId: user.id,
+  //       email: user.emailAddresses[0]?.emailAddress || "",
+  //       name:
+  //         user.fullName ||
+  //         user.firstName ||
+  //         user.emailAddresses[0]?.emailAddress ||
+  //         "Unknown User",
+  //       imageUrl: user.imageUrl || "",
+  //     });
+  //     // Connect the user to Stream chat using the token provider
+  //     await stramClient.connectUser(
+  //       {
+  //         id: user.id,
+  //         name:
+  //           user.fullName ||
+  //           user.firstName ||
+  //           user.emailAddresses[0]?.emailAddress ||
+  //           "Unknown User",
+  //         image: user.imageUrl || "",
+  //       },
+  //       tokenProvider
+  //     );
+  //   } catch (err) {
+  //     console.error("Error syncing user:", err);
+  //     setError(err instanceof Error ? err.message : "Failed to sync User");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }, [createOrUpdateUser, user]);
+  // components/Providers/UserSyncWrapper.tsx (inside syncUser)
   const syncUser = useCallback(async () => {
     if (!user?.id) return;
     try {
       setIsLoading(true);
       setError(null);
-      // Provides a JWT token for Stream using a server action
-      const tokenProvider = async () => {
-        if (!user.id) {
-          throw new Error("User not found");
-        }
-        const token = await createToken(user.id);
-        return token;
-      };
-      // Save or update the user in Convex
+
+      // Upsert user in Convex
       await createOrUpdateUser({
         userId: user.id,
         email: user.emailAddresses[0]?.emailAddress || "",
@@ -48,7 +86,12 @@ function UserSyncWrapper({ children }: { children: ReactNode }) {
           "Unknown User",
         imageUrl: user.imageUrl || "",
       });
-      // Connect the user to Stream chat using the token provider
+
+      // Fetch token from server action
+      const token = await createToken(user.id);
+      if (!token) throw new Error("No Stream token returned from server");
+
+      // Connect to Stream with token string
       await stramClient.connectUser(
         {
           id: user.id,
@@ -59,8 +102,10 @@ function UserSyncWrapper({ children }: { children: ReactNode }) {
             "Unknown User",
           image: user.imageUrl || "",
         },
-        tokenProvider
+        token // pass the raw token string
       );
+
+      console.log("Stream client connected for user:", user.id);
     } catch (err) {
       console.error("Error syncing user:", err);
       setError(err instanceof Error ? err.message : "Failed to sync User");
