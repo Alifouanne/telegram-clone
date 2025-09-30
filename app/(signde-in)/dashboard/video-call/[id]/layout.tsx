@@ -1,6 +1,6 @@
 "use client";
-import React, {
-  ReactNode,
+import {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -10,21 +10,22 @@ import {
   StreamCall,
   StreamVideo,
   StreamTheme,
-  Call,
+  type Call,
   CallingState,
   StreamVideoClient,
 } from "@stream-io/video-react-sdk";
 import { useUser } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
 import { createToken } from "@/actions/createToken";
-import StatusCard from "@/components/Mainpage/StatusCard";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/Mainpage/LoadingSpinner";
 import { AlertTriangle, Video } from "lucide-react";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
+
 if (!process.env.NEXT_PUBLIC_STREAM_API_KEY) {
   throw new Error("NEXT_PUBLIC_STREAM_API_KEY is not defined");
 }
+
 function VideoCallLayout({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { id } = useParams();
@@ -43,14 +44,13 @@ function VideoCallLayout({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
-  //create token provider function outside of useEffect and useCallback to avoid recreating it on every render
   const tokenProvider = useCallback(async () => {
     if (!user?.id) {
       throw new Error("User not found");
     }
     return await createToken(user.id);
   }, [user?.id]);
-  //initialize the client and call inside useEffect
+
   useEffect(() => {
     if (!streamUser) {
       setClient(null);
@@ -86,7 +86,7 @@ function VideoCallLayout({ children }: { children: ReactNode }) {
       }
     };
     joinCall();
-    //cleanup function to leave the call when component unmounts
+
     return () => {
       if (streamCall && streamCall.state.callingState === CallingState.JOINED) {
         streamCall.leave().catch(console.error);
@@ -96,49 +96,123 @@ function VideoCallLayout({ children }: { children: ReactNode }) {
 
   if (error) {
     return (
-      <StatusCard
-        title="Call Error"
-        description={error}
-        className="min-h-screen bg-red-50 text-gray-500"
-        action={
-          <Button
-            onClick={() => window.location.reload()}
-            variant="destructive"
-          >
-            Retry
-          </Button>
-        }
-      >
-        <div className="size-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-          <AlertTriangle className="size-8 text-red-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 px-6 py-12">
+        <div className="max-w-md w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-center animate-in zoom-in duration-700 delay-100">
+            <div className="relative">
+              <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative size-20 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                <AlertTriangle
+                  className="size-10 text-white"
+                  strokeWidth={2.5}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+            <h2 className="text-2xl font-bold text-gray-900">Call Error</h2>
+            <p className="text-gray-600">{error}</p>
+          </div>
+
+          <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+            <Button
+              onClick={() => window.location.reload()}
+              className="w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
+            >
+              Retry Connection
+            </Button>
+          </div>
+
+          <p className="text-center text-sm text-gray-500 animate-in fade-in duration-500 delay-500">
+            Please check your internet connection and try again
+          </p>
         </div>
-      </StatusCard>
+      </div>
     );
   }
 
   if (!client) {
     return (
-      <StatusCard
-        title="Initializing Client..."
-        description="Setting up video call connection..."
-        className="min-h-screen bg-blue-50"
-      >
-        <Spinner size="lg" />
-      </StatusCard>
-    );
-  }
-  if (!call) {
-    return (
-      <StatusCard title="Joining Call..." className="min-h-screen bg-green-50">
-        <div className="animate-bounce size-16 mx-auto">
-          <div className="size-16 bg-green-200 rounded-full flex items-center justify-center">
-            <Video className="size-8 text-green-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 px-6 py-12">
+        <div className="max-w-md w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-center animate-in zoom-in duration-700 delay-100">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative">
+                <Spinner size="lg" />
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Initializing Client...
+            </h2>
+            <p className="text-gray-600">Setting up video call connection...</p>
+          </div>
+
+          <div className="flex justify-center gap-2 animate-in fade-in duration-500 delay-300">
+            <div
+              className="size-2 bg-blue-500 rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            />
+            <div
+              className="size-2 bg-blue-500 rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            />
+            <div
+              className="size-2 bg-blue-500 rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            />
           </div>
         </div>
-        <div className="text-green-600 font-mono text-sm bg-green-100 px-3 py-1 rounded-full inline-block">
-          Call ID: {id}
+      </div>
+    );
+  }
+
+  if (!call) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50 px-6 py-12">
+        <div className="max-w-md w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-center animate-in zoom-in duration-700 delay-100">
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative size-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                <Video className="size-10 text-white" strokeWidth={2.5} />
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Joining Call...
+            </h2>
+            <p className="text-gray-600">Connecting to video room...</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-200 rounded-full">
+              <div className="size-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-green-700 font-mono text-sm font-medium">
+                Call ID: {id}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-2 animate-in fade-in duration-500 delay-300">
+            <div
+              className="size-2 bg-green-500 rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            />
+            <div
+              className="size-2 bg-green-500 rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            />
+            <div
+              className="size-2 bg-green-500 rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            />
+          </div>
         </div>
-      </StatusCard>
+      </div>
     );
   }
 

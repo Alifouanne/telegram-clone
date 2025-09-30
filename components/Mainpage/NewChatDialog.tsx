@@ -1,12 +1,8 @@
 "use client";
-// Dialog component to start a new 1:1 or group chat.
-// - Search and select users
-// - Optional group name when creating a group chat (3+ total members)
-// - Persists the chat via `useCreateNewChat` and activates it in Stream
-import { Doc } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { useCreateNewChat } from "@/hooks/useCreateNewChat";
 import { useUser } from "@clerk/nextjs";
-import { ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useChatContext } from "stream-chat-react";
 import {
   Dialog,
@@ -23,37 +19,26 @@ import { Button } from "../ui/button";
 import { XIcon } from "../ui/x";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-/**
- * Renders a trigger (children) that opens a dialog for creating a new chat.
- * Manages selected users, optional group name, and channel creation.
- */
+
 function NewChatDialog({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  // Users selected to include in the chat (excluding current user)
   const [selectedUsers, setSelectedUsers] = useState<Doc<"users">[]>([]);
-  // Optional name for group chats
   const [groupName, setGroupName] = useState("");
   const createNewChat = useCreateNewChat();
   const { user } = useUser();
   const { setActiveChannel } = useChatContext();
-  //!edit this one
-  // Add a user to the selection if not already present
-  // const handleSelectUser = (user: Doc<"users">) => {
-  //   if (!selectedUsers.find((u) => u._id === user._id)) {
-  //     setSelectedUsers((prev) => [...prev, user]);
-  //   }
-  // };
+
   const handleSelectUser = (u: Doc<"users">) => {
     setSelectedUsers((prev) => {
       if (prev.find((p) => p._id === u._id)) return prev;
       return [...prev, u];
     });
   };
-  // Remove a user from the selection
+
   const removeUser = (userId: string) => {
     setSelectedUsers((prev) => prev.filter((user) => user._id !== userId));
   };
-  // Sync dialog open state; reset fields when closing
+
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
@@ -61,7 +46,7 @@ function NewChatDialog({ children }: { children: ReactNode }) {
       setGroupName("");
     }
   };
-  // Create the channel (1:1 or group) then set it as active in Stream
+
   const handleCreateChat = async () => {
     const totalMembers = selectedUsers.length + 1;
     const isGroupChat = totalMembers > 2;
@@ -82,30 +67,35 @@ function NewChatDialog({ children }: { children: ReactNode }) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-300">
+        <DialogHeader className="animate-in slide-in-from-top-2 duration-500">
           <DialogTitle>Start a New Chat</DialogTitle>
           <DialogDescription>
             Search for users to start a conversation with
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Search existing users and add them to the selection */}
-          <UserSearch onSelectUser={handleSelectUser} className="w-full" />
+          <div className="animate-in fade-in-0 duration-500 delay-100">
+            <UserSearch onSelectUser={handleSelectUser} className="w-full" />
+          </div>
           {selectedUsers.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-3 animate-in slide-in-from-bottom-2 duration-500 delay-200">
               <h4 className="text-sm font-medium text-foreground dark:text-gray-100">
                 Selected Users ({selectedUsers.length})
               </h4>
               <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {selectedUsers.map((user) => (
+                {selectedUsers.map((user, index) => (
                   <div
                     key={user._id}
-                    className="flex items-center justify-between p-2 bg-muted/50 dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg"
+                    className="flex items-center justify-between p-2 bg-muted/50 dark:bg-gray-800 border border-border dark:border-gray-700 rounded-lg hover:bg-muted dark:hover:bg-gray-700 transition-all duration-300 hover:scale-[1.02] animate-in fade-in-0 slide-in-from-left-2 "
+                    style={{
+                      animationDelay: `${index * 50}ms`,
+                      animationFillMode: "both",
+                    }}
                   >
                     <div className="flex items-center space-x-2">
                       <Image
-                        src={user.imageUrl}
+                        src={user.imageUrl || "/placeholder.svg"}
                         alt={user.name}
                         width={24}
                         height={24}
@@ -120,10 +110,9 @@ function NewChatDialog({ children }: { children: ReactNode }) {
                         </p>
                       </div>
                     </div>
-                    {/* Remove a selected user */}
                     <Button
                       onClick={() => removeUser(user._id)}
-                      className="text-muted-foreground dark:text-gray-400 hover:text-destructive dark:hover:text-red-500 p-1 transition-colors"
+                      className="text-muted-foreground dark:text-gray-400 hover:text-destructive dark:hover:text-red-500 p-1 transition-all duration-300 hover:scale-110"
                     >
                       <XIcon className="size-4" />
                     </Button>
@@ -131,8 +120,7 @@ function NewChatDialog({ children }: { children: ReactNode }) {
                 ))}
               </div>
               {selectedUsers.length > 1 && (
-                <div className="space-y-2">
-                  {/* Group name is shown only when creating a group chat */}
+                <div className="space-y-2 animate-in fade-in-0 duration-500 delay-300">
                   <Label
                     htmlFor="groupName"
                     className="text-sm font-medium text-foreground dark:text-gray-100"
@@ -145,7 +133,7 @@ function NewChatDialog({ children }: { children: ReactNode }) {
                     placeholder="Enter a name of your group chat..."
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
-                    className="w-full dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                    className="w-full dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 transition-all duration-300 focus:scale-[1.01]"
                   />
                   <p className="text-xs text-muted-foreground dark:text-gray-400">
                     Leave empty for a default name:&quot;Group chat (
@@ -156,15 +144,14 @@ function NewChatDialog({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-        <DialogFooter>
-          {/* Close without creating a chat */}
+        <DialogFooter className="animate-in slide-in-from-bottom-2 duration-500 delay-400">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          {/* Create the chat; disabled until at least one user is selected */}
           <Button
             disabled={selectedUsers.length === 0}
             onClick={handleCreateChat}
+            className="hover:scale-105 transition-transform duration-300"
           >
             {selectedUsers.length > 1
               ? `Create Chat Group (${selectedUsers.length + 1} members)`
