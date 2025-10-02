@@ -36,7 +36,7 @@ export default function HeroSection() {
                 </div>
               </div>
               <Image
-                className="-z-10 order-first ml-auto h-56 w-full object-cover invert sm:h-96 lg:absolute lg:inset-0 lg:-right-20 lg:-top-96 lg:order-last lg:h-max lg:w-2/3 lg:object-contain dark:mix-blend-lighten dark:invert-0"
+                className="-z-10 order-first ml-auto h-96 w-full  object-cover overflow-visible invert sm:h-96 lg:absolute lg:inset-0 lg:-right-20 lg:-top-96 lg:order-last lg:h-max lg:w-2/3 lg:object-contain dark:mix-blend-lighten dark:invert-0 "
                 src={HeroPic}
                 alt="Abstract Object"
                 height="4000"

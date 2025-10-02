@@ -57,22 +57,24 @@ function DashboardPage() {
                 ) : (
                   <ChannelHeader />
                 )}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2">
                   <Button
                     variant="outline"
                     onClick={handleCall}
-                    className="hover:scale-105 transition-all duration-300 hover:shadow-md bg-transparent"
+                    size="sm"
+                    className="hover:scale-105 transition-all duration-300 hover:shadow-md bg-transparent px-2 md:px-4"
                   >
                     <VideoIcon className="size-4" />
-                    Video Call
+                    <span className="hidden md:inline ml-2">Video Call</span>
                   </Button>
                   <Button
                     variant="outline"
                     onClick={handleLeaveChat}
-                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 hover:scale-105 transition-all duration-300 bg-transparent"
+                    size="sm"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 hover:scale-105 transition-all duration-300 bg-transparent px-2 md:px-4"
                   >
                     <LogoutIcon className="size-4" />
-                    Leave Chat
+                    <span className="hidden md:inline ml-2">Leave Chat</span>
                   </Button>
                 </div>
               </div>
